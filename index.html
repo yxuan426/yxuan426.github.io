@@ -51,7 +51,7 @@
 	<footer class="entry-meta-header">
 		<span class="meta-elements date">
 			<a href="/2015/11/28/Handle-interrupt-in-ffmpeg-while-decoding-RTSP-stream-in-iOS/" class="article-date">
-  <time datetime="2015-11-28T15:25:46.000Z" itemprop="datePublished">2015-11-28</time>
+  <time datetime="2015-11-28T15:27:41.000Z" itemprop="datePublished">2015-11-28</time>
 </a>
 		</span>
 		<span class="meta-elements author">Sternapara</span>
@@ -65,7 +65,7 @@
 	</header>
 	<div class="entry-content">
 		
-    	<p>#Handle interrupt in ffmpeg while decoding RTSP stream in iOS</p>
+    	<p>#Handle-interrupt-in-ffmpeg-while-decoding-RTSP-stream-in-iOS</p>
 <p>默认情况下，ffmpeg向RTSP服务器发起连接到建立连接的这段时间内，当前线程会处于阻塞状态。建立连接后，长时间未接收到数据或者网络断开，线程也会阻塞。使用<code>interrupt_callback</code>可以对阻塞进行中断处理，这样可以在ffmpeg内部感知实现：<br>1.控制连接超时，避免连接耗时过长而处于无响应状态<br>2.断线重连，避免长时间未接收数据而处于等待状态</p>
 <p>实现方式：<br>1.设置中断。<code>avformat_open_input</code>执行前加入以下代码：<br><figure class="highlight dns"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">pFmtCtx = avformat_alloc_context()<span class="comment">;</span></span><br><span class="line">AVIOInterruptCB cb = &#123;interrupt_callback, (__bridge void*)(self)&#125;<span class="comment">;</span></span><br><span class="line">pFmtCtx-&gt;interrupt_callback = cb<span class="comment">;</span></span><br></pre></td></tr></table></figure></p>
 <p>其中，<code>AVIOInterruptCB</code>是一个结构体类型。定义如下：<br><figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="keyword">struct</span> <span class="built_in">AVIOInterruptCB</span> &#123;</span><br><span class="line">    <span class="keyword">int</span> (*callback)(<span class="keyword">void</span>*);</span><br><span class="line">    <span class="keyword">void</span> *opaque;</span><br><span class="line">&#125; <span class="built_in">AVIOInterruptCB</span>;</span><br></pre></td></tr></table></figure></p>
@@ -76,57 +76,6 @@
 <p>2.中断时机判断<br>记录发起连接的时间戳作为判断超时的基准值<br><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">_connectTimestamp = [NSDate date];</span><br><span class="line"><span class="keyword">if</span> (<span class="number">0</span> != avformat_open_input(&amp;pFmtCtx, [_url UTF8String], <span class="literal">NULL</span>, &amp;options))</span><br><span class="line">&#123;</span><br><span class="line">	......</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
 <p>记录每读取到一个包数据记录时间戳作为判断断线超时的基准值<br><figure class="highlight applescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (av_read_frame(pFmtCtx, &amp;pkt) &gt;= <span class="number">0</span>)</span><br><span class="line">&#123;</span><br><span class="line">	_recvFrameTimestamp = [NSDate <span class="type">date</span>];</span><br><span class="line">	......</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
 <p>每次<code>interrupt_callback</code>执行的时间戳与基准值作比较，时长超过一定值则判断超时并阻塞：<br><figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="built_in">BOOL</span>)shouldInterrupt</span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">if</span>(_connected)</span><br><span class="line">	&#123;</span><br><span class="line">		<span class="built_in">NSTimeInterval</span> connTimeoutInterval = -[_connectTimestamp timeIntervalSinceNow];</span><br><span class="line">		_flagInterrupt = connTimeoutInterval &gt; kConnTimeoutInterval ? <span class="literal">YES</span> : <span class="literal">NO</span>;</span><br><span class="line">		<span class="keyword">return</span> _flagInterrupt;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">else</span></span><br><span class="line">	&#123;</span><br><span class="line">		<span class="built_in">NSTimeInterval</span> decodeTimeoutInterval = -[_recvFrameTimestamp timeIntervalSinceNow];</span><br><span class="line">		_flagInterrupt = decodeTimeoutInterval &gt; kDecodeTimeoutInterval ? <span class="literal">YES</span> : <span class="literal">NO</span>;</span><br><span class="line">		<span class="keyword">return</span> _flagInterrupt;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-
-    
-	</div>
-	<footer class="entry-footer">
-		<div class="entry-meta-footer">
-			<span class="category">
-				
-			</span>
-			<span class="tags">
-				
-			</span>
-		</div>
-	</footer>
-	
-</article>
-
-
-	<hr class="article-devider">
-
-
-
-  
-    <article id="post-Handle interrupt in ffmpeg while decoding RTSP stream in iOS" class="post">
-	<footer class="entry-meta-header">
-		<span class="meta-elements date">
-			<a href="/2015/11/28/Handle interrupt in ffmpeg while decoding RTSP stream in iOS/" class="article-date">
-  <time datetime="2015-11-28T15:20:43.000Z" itemprop="datePublished">2015-11-28</time>
-</a>
-		</span>
-		<span class="meta-elements author">Sternapara</span>
-		<div class="commentscount">
-			
-		</div>
-	</footer>
-	
-	<header class="entry-header">
-		
-	</header>
-	<div class="entry-content">
-		
-    	<p>#Handle interrupt in ffmpeg while decoding RTSP stream in iOS</p>
-<p>默认情况下，ffmpeg向RTSP服务器发起连接到建立连接的这段时间内，当前线程会处于阻塞状态。建立连接后，长时间未接收到数据或者网络断开，线程也会阻塞。使用<code>interrupt_callback</code>可以对阻塞进行中断处理，这样可以在ffmpeg内部感知实现：<br>1.控制连接超时，避免连接耗时过长而处于无响应状态<br>2.断线重连，避免长时间未接收数据而处于等待状态</p>
-<p>实现方式：<br>1.设置中断。<code>avformat_open_input</code>执行前加入以下代码：<br><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pFmtCtx = avformat_alloc_context();&#10;AVIOInterruptCB cb = &#123;interrupt_callback, (__bridge void*)(self)&#125;;&#10;pFmtCtx-&#62;interrupt_callback = cb;</span><br></pre></td></tr></table></figure></p>
-<p>其中，<code>AVIOInterruptCB</code>是一个结构体类型。定义如下：<br><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">typedef struct AVIOInterruptCB &#123;&#10;    int (*callback)(void*);&#10;    void *opaque;&#10;&#125; AVIOInterruptCB;</span><br></pre></td></tr></table></figure></p>
-<p>可以看到，结构体定义了两个变量。第一个变量是一个函数指针，后一个变量作为它的参数从外部传入。</p>
-<p>定义一个静态方法作为函数实体：<br><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">static int interrupt_callback(void *ctx)&#10;&#123;&#10;    __unsafe_unretained VideoDecoder *p = (__bridge VideoDecoder*)ctx;&#10;    const BOOL r = [p shouldInterrupt]; &#10;    return r;&#10;&#125;</span><br></pre></td></tr></table></figure></p>
-<p>参数即为上文所述，本例以类对象作为参数传入。返回值指示是否需要中断，返回1阻塞，返回0中断。</p>
-<p>将AVFormatContext的中断回调函数链接好以后，ffmpeg发起连接后就开始调用<code>interrupt_callback</code>函数以确定进入中断或阻塞</p>
-<p>2.中断时机判断<br>记录发起连接的时间戳作为判断超时的基准值<br><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">_connectTimestamp = [NSDate date];&#10;if (0 != avformat_open_input(&#38;pFmtCtx, [_url UTF8String], NULL, &#38;options))&#10;&#123;&#10;&#9;......&#10;&#125;</span><br></pre></td></tr></table></figure></p>
-<p>记录每读取到一个包数据记录时间戳作为判断断线超时的基准值<br><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">if (av_read_frame(pFmtCtx, &#38;pkt) &#62;= 0)&#10;&#123;&#10;&#9;_recvFrameTimestamp = [NSDate date];&#10;&#9;......&#10;&#125;</span><br></pre></td></tr></table></figure></p>
-<p>每次<code>interrupt_callback</code>执行的时间戳与基准值作比较，时长超过一定值则判断超时并阻塞：<br><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">- (BOOL)shouldInterrupt&#10;&#123;&#10;&#9;if(_connected)&#10;&#9;&#123;&#10;&#9;&#9;NSTimeInterval connTimeoutInterval = -[_connectTimestamp timeIntervalSinceNow];&#10;&#9;&#9;_flagInterrupt = connTimeoutInterval &#62; kConnTimeoutInterval ? YES : NO;&#10;&#9;&#9;return _flagInterrupt;&#10;&#9;&#125;&#10;&#9;else&#10;&#9;&#123;&#10;&#9;&#9;NSTimeInterval decodeTimeoutInterval = -[_recvFrameTimestamp timeIntervalSinceNow];&#10;&#9;&#9;_flagInterrupt = decodeTimeoutInterval &#62; kDecodeTimeoutInterval ? YES : NO;&#10;&#9;&#9;return _flagInterrupt;&#10;&#9;&#125;&#10;&#125;</span><br></pre></td></tr></table></figure></p>
 
     
 	</div>
