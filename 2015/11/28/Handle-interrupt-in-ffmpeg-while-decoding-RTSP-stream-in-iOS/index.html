@@ -5,15 +5,19 @@
   
   <title>Douyi</title>
   <meta name="viewport" content="width=device-width">
-  <meta name="description">
-<meta property="og:type" content="website">
+  <meta name="description" content="#Handle interrupt in ffmpeg while decoding RTSP stream in iOS
+默认情况下，ffmpeg向RTSP服务器发起连接到建立连接的这段时间内，当前线程会处于阻塞状态。建立连接后，长时间未接收到数据或者网络断开，线程也会阻塞。使用interrupt_callback可以对阻塞进行中断处理，这样可以在ffmpeg内部感知实现：1.控制连接超时，避免">
+<meta property="og:type" content="article">
 <meta property="og:title" content="Douyi">
-<meta property="og:url" content="http://yoursite.com/index.html">
+<meta property="og:url" content="http://yoursite.com/2015/11/28/Handle-interrupt-in-ffmpeg-while-decoding-RTSP-stream-in-iOS/index.html">
 <meta property="og:site_name" content="Douyi">
-<meta property="og:description">
+<meta property="og:description" content="#Handle interrupt in ffmpeg while decoding RTSP stream in iOS
+默认情况下，ffmpeg向RTSP服务器发起连接到建立连接的这段时间内，当前线程会处于阻塞状态。建立连接后，长时间未接收到数据或者网络断开，线程也会阻塞。使用interrupt_callback可以对阻塞进行中断处理，这样可以在ffmpeg内部感知实现：1.控制连接超时，避免">
+<meta property="og:updated_time" content="2015-11-28T15:25:46.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Douyi">
-<meta name="twitter:description">
+<meta name="twitter:description" content="#Handle interrupt in ffmpeg while decoding RTSP stream in iOS
+默认情况下，ffmpeg向RTSP服务器发起连接到建立连接的这段时间内，当前线程会处于阻塞状态。建立连接后，长时间未接收到数据或者网络断开，线程也会阻塞。使用interrupt_callback可以对阻塞进行中断处理，这样可以在ffmpeg内部感知实现：1.控制连接超时，避免">
   
     <link rel="alternative" href="/atom.xml" title="Douyi" type="application/atom+xml">
   
@@ -45,9 +49,7 @@
 	</div>
 </header>
     <div id="main">
-      
-  
-    <article id="post-Handle-interrupt-in-ffmpeg-while-decoding-RTSP-stream-in-iOS" class="post">
+      <article id="post-Handle-interrupt-in-ffmpeg-while-decoding-RTSP-stream-in-iOS" class="post">
 	<footer class="entry-meta-header">
 		<span class="meta-elements date">
 			<a href="/2015/11/28/Handle-interrupt-in-ffmpeg-while-decoding-RTSP-stream-in-iOS/" class="article-date">
@@ -90,117 +92,26 @@
 		</div>
 	</footer>
 	
-</article>
-
-
-	<hr class="article-devider">
-
-
-
-  
-    <article id="post-Handle interrupt in ffmpeg while decoding RTSP stream in iOS" class="post">
-	<footer class="entry-meta-header">
-		<span class="meta-elements date">
-			<a href="/2015/11/28/Handle interrupt in ffmpeg while decoding RTSP stream in iOS/" class="article-date">
-  <time datetime="2015-11-28T15:20:43.000Z" itemprop="datePublished">2015-11-28</time>
-</a>
-		</span>
-		<span class="meta-elements author">Sternapara</span>
-		<div class="commentscount">
-			
-		</div>
-	</footer>
-	
-	<header class="entry-header">
-		
-	</header>
-	<div class="entry-content">
-		
-    	<p>#Handle interrupt in ffmpeg while decoding RTSP stream in iOS</p>
-<p>默认情况下，ffmpeg向RTSP服务器发起连接到建立连接的这段时间内，当前线程会处于阻塞状态。建立连接后，长时间未接收到数据或者网络断开，线程也会阻塞。使用<code>interrupt_callback</code>可以对阻塞进行中断处理，这样可以在ffmpeg内部感知实现：<br>1.控制连接超时，避免连接耗时过长而处于无响应状态<br>2.断线重连，避免长时间未接收数据而处于等待状态</p>
-<p>实现方式：<br>1.设置中断。<code>avformat_open_input</code>执行前加入以下代码：<br><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pFmtCtx = avformat_alloc_context();&#10;AVIOInterruptCB cb = &#123;interrupt_callback, (__bridge void*)(self)&#125;;&#10;pFmtCtx-&#62;interrupt_callback = cb;</span><br></pre></td></tr></table></figure></p>
-<p>其中，<code>AVIOInterruptCB</code>是一个结构体类型。定义如下：<br><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">typedef struct AVIOInterruptCB &#123;&#10;    int (*callback)(void*);&#10;    void *opaque;&#10;&#125; AVIOInterruptCB;</span><br></pre></td></tr></table></figure></p>
-<p>可以看到，结构体定义了两个变量。第一个变量是一个函数指针，后一个变量作为它的参数从外部传入。</p>
-<p>定义一个静态方法作为函数实体：<br><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">static int interrupt_callback(void *ctx)&#10;&#123;&#10;    __unsafe_unretained VideoDecoder *p = (__bridge VideoDecoder*)ctx;&#10;    const BOOL r = [p shouldInterrupt]; &#10;    return r;&#10;&#125;</span><br></pre></td></tr></table></figure></p>
-<p>参数即为上文所述，本例以类对象作为参数传入。返回值指示是否需要中断，返回1阻塞，返回0中断。</p>
-<p>将AVFormatContext的中断回调函数链接好以后，ffmpeg发起连接后就开始调用<code>interrupt_callback</code>函数以确定进入中断或阻塞</p>
-<p>2.中断时机判断<br>记录发起连接的时间戳作为判断超时的基准值<br><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">_connectTimestamp = [NSDate date];&#10;if (0 != avformat_open_input(&#38;pFmtCtx, [_url UTF8String], NULL, &#38;options))&#10;&#123;&#10;&#9;......&#10;&#125;</span><br></pre></td></tr></table></figure></p>
-<p>记录每读取到一个包数据记录时间戳作为判断断线超时的基准值<br><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">if (av_read_frame(pFmtCtx, &#38;pkt) &#62;= 0)&#10;&#123;&#10;&#9;_recvFrameTimestamp = [NSDate date];&#10;&#9;......&#10;&#125;</span><br></pre></td></tr></table></figure></p>
-<p>每次<code>interrupt_callback</code>执行的时间戳与基准值作比较，时长超过一定值则判断超时并阻塞：<br><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">- (BOOL)shouldInterrupt&#10;&#123;&#10;&#9;if(_connected)&#10;&#9;&#123;&#10;&#9;&#9;NSTimeInterval connTimeoutInterval = -[_connectTimestamp timeIntervalSinceNow];&#10;&#9;&#9;_flagInterrupt = connTimeoutInterval &#62; kConnTimeoutInterval ? YES : NO;&#10;&#9;&#9;return _flagInterrupt;&#10;&#9;&#125;&#10;&#9;else&#10;&#9;&#123;&#10;&#9;&#9;NSTimeInterval decodeTimeoutInterval = -[_recvFrameTimestamp timeIntervalSinceNow];&#10;&#9;&#9;_flagInterrupt = decodeTimeoutInterval &#62; kDecodeTimeoutInterval ? YES : NO;&#10;&#9;&#9;return _flagInterrupt;&#10;&#9;&#125;&#10;&#125;</span><br></pre></td></tr></table></figure></p>
-
     
-	</div>
-	<footer class="entry-footer">
-		<div class="entry-meta-footer">
-			<span class="category">
-				
-			</span>
-			<span class="tags">
-				
-			</span>
-		</div>
-	</footer>
-	
+<nav id="article-nav">
+  
+  
+    <a href="/2015/11/28/Handle interrupt in ffmpeg while decoding RTSP stream in iOS/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">
+        
+          (no title)
+        
+      </div>
+    </a>
+  
+</nav>
+
+  
 </article>
 
 
-	<hr class="article-devider">
 
-
-
-  
-    <article id="post-Handle-damaged-pictures-when-decoding-H264-data-with-ffmpeg" class="post">
-	<footer class="entry-meta-header">
-		<span class="meta-elements date">
-			<a href="/2015/11/27/Handle-damaged-pictures-when-decoding-H264-data-with-ffmpeg/" class="article-date">
-  <time datetime="2015-11-27T15:15:59.000Z" itemprop="datePublished">2015-11-27</time>
-</a>
-		</span>
-		<span class="meta-elements author">Sternapara</span>
-		<div class="commentscount">
-			
-		</div>
-	</footer>
-	
-	<header class="entry-header">
-		
-  
-    <h1 itemprop="name" class="entry-title">
-      <a class="article-title" href="/2015/11/27/Handle-damaged-pictures-when-decoding-H264-data-with-ffmpeg/">Handle damaged pictures when decoding H264 data with  ffmpeg</a>
-    </h1>
-  
-
-	</header>
-	<div class="entry-content">
-		
-    	<p>#H264损坏画面处理方法</p>
-<p>H264压缩数据传输过程中一旦丢帧，如果不做任何处理，解码渲染出来的图像会存在不同程度的损坏。本文给出一个方法，可以过滤一部分损坏画面。</p>
-<p>思路：在AVFrame中增加一个标志位指示图像帧是否损坏，图像解出后判断该标志位，若指示未损坏可立即送显，否则丢弃该帧和下一个I帧出现之前的所有P\B帧。</p>
-<p>实现：<br>在ffmpeg2.2.1版本的源代码上作4处修改<br>1.修改libavutil/frame.h文件，在AVFrame结构体中增加int类型变量<code>isDamaged</code><br>2.修改libavutil/frame.c文件，在<code>get_frame_defaults</code>方法中初始化<code>isDamage</code>值为1<br>3.修改avcodec/h264.c文件，在<code>decode_slice</code>方法中对cabac\cavlc片解码失败处将<code>isDamaged</code>置为0，表示当前的图像已损坏<br>4.修改libavutil/frame.c文件，在<code>av_frame_copy_props</code>方法中增加对<code>isDamaged</code>变量的copy</p>
-<p>使用：<br>每次调用<code>avcodec_decode2</code>获得一帧解压图像后，判断<code>isDamaged</code>作相应处理。<br>PS：若GOP定长，并且对实时性没有非常严格的要求，可以考虑缓存一幅画面所有帧，每次送显前统计帧数是否为定长、检查所有帧的有效性，丢弃不合要求的，这样可以过滤掉绝大部分损坏画面。</p>
-
-    
-	</div>
-	<footer class="entry-footer">
-		<div class="entry-meta-footer">
-			<span class="category">
-				
-			</span>
-			<span class="tags">
-				
-			</span>
-		</div>
-	</footer>
-	
-</article>
-
-
-	<hr class="article-devider">
-
-
-
-  
-  
 
     </div>
     <div class="mb-search">
