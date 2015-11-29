@@ -47,6 +47,51 @@
     <div id="main">
       
   
+    <article id="post-Convert-DTS-and-PTS-for-recoding-video-with-ffmpeg" class="post">
+	<footer class="entry-meta-header">
+		<span class="meta-elements date">
+			<a href="/2015/11/29/Convert-DTS-and-PTS-for-recoding-video-with-ffmpeg/" class="article-date">
+  <time datetime="2015-11-29T13:57:15.000Z" itemprop="datePublished">2015-11-29</time>
+</a>
+		</span>
+		<span class="meta-elements author">Sternapara</span>
+		<div class="commentscount">
+			
+		</div>
+	</footer>
+	
+	<header class="entry-header">
+		
+	</header>
+	<div class="entry-content">
+		
+    	<p>#ffmpeg录制视频文件同步处理小技巧</p>
+<p>显示视频流过程中，DTS和PTS从视频流起点开始计算的，而录制的文件播放时是从0开始计算DTS和PTS，因此在录制的时候需要对两者作换算，以0为起始值，这样画面和时间就能同步起来。<br>1.定义两个变量，分别记录开始录制时的DTS和PTS<br><figure class="highlight capnproto"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">@<span class="class"><span class="keyword">interface</span> <span class="title">Recoder</span>()</span><br><span class="line"></span>&#123;</span><br><span class="line">    ....</span><br><span class="line">    int64_t _dtsOffset;</span><br><span class="line">    int64_t _ptsOffset;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>在类初始化的时候将两个变量初始化为－1</p>
+<p>2.第一次收到AVPacket时更新两个变量的值<br><figure class="highlight erlang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="pp">- <span class="params">(void)</span>writePacket:<span class="params">(<span class="variable">AVPacket</span>)</span>pkt</span><br><span class="line">&#123;</span><br><span class="line">    if<span class="params">(<span class="variable">_</span>dts<span class="variable">Offset</span> == -<span class="number">1</span>)</span></span><br><span class="line">	&#123;</span><br><span class="line">	    _dtsOffset = pkt</span>.dts;</span><br><span class="line">		<span class="variable">_</span>pts<span class="variable">Offset</span> = pkt.pts;</span><br><span class="line">	&#125;</span><br><span class="line">	</span><br><span class="line">	......</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>3.使用函数<code>av_rescale_q_rnd</code>对需要写入的pkt的dts、pts作转换<br><figure class="highlight lasso"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">－(<span class="literal">void</span>)writePacket:(AVPacket)pkt</span><br><span class="line">&#123;</span><br><span class="line">    <span class="attribute">...</span><span class="attribute">...</span></span><br><span class="line">	pktToWrite<span class="built_in">.</span>pts = av_rescale_q_rnd(pkt<span class="built_in">.</span>pts - _pkgPtsIndex, in_stream<span class="subst">-&gt;</span>time_base, out_stream<span class="subst">-&gt;</span>time_base, (AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX));</span><br><span class="line">	pktToWrite<span class="built_in">.</span>dts = av_rescale_q_rnd(pkt<span class="built_in">.</span>dts - _pkgDtsIndex, in_stream<span class="subst">-&gt;</span>time_base, out_stream<span class="subst">-&gt;</span>time_base, (AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX));</span><br><span class="line">	<span class="attribute">...</span><span class="attribute">...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+
+    
+	</div>
+	<footer class="entry-footer">
+		<div class="entry-meta-footer">
+			<span class="category">
+				
+			</span>
+			<span class="tags">
+				
+			</span>
+		</div>
+	</footer>
+	
+</article>
+
+
+	<hr class="article-devider">
+
+
+
+  
     <article id="post-Handle-interrupt-in-ffmpeg-while-decoding-RTSP-stream-in-iOS" class="post">
 	<footer class="entry-meta-header">
 		<span class="meta-elements date">
