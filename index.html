@@ -47,6 +47,59 @@
     <div id="main">
       
   
+    <article id="post-build-a-simple-rtsp-server-to-output-h264-stream" class="post">
+	<footer class="entry-meta-header">
+		<span class="meta-elements date">
+			<a href="/2015/11/30/build-a-simple-rtsp-server-to-output-h264-stream/" class="article-date">
+  <time datetime="2015-11-30T15:10:57.000Z" itemprop="datePublished">2015-11-30</time>
+</a>
+		</span>
+		<span class="meta-elements author">Sternapara</span>
+		<div class="commentscount">
+			
+		</div>
+	</footer>
+	
+	<header class="entry-header">
+		
+  
+    <h1 itemprop="name" class="entry-title">
+      <a class="article-title" href="/2015/11/30/build-a-simple-rtsp-server-to-output-h264-stream/">build a simple rtsp server to output h264 stream </a>
+    </h1>
+  
+
+	</header>
+	<div class="entry-content">
+		
+    	<p>H264片段调试部署和简单分析</p>
+<p>研究ffmpeg解码画面错误问题时，需要损坏的图像数据作为输入。同时，对一份数据用不同方法处理，可以比较直观地对比处理结果。<br>使用live555可以搭建一个局域网RTSP服务器，将画面错误时保存的码流文件作为视频源，启动服务器，客户度连接上就可以获得损坏的数据了。由于在局域网传输，传输过程几乎不会出现二次损坏，因此输入可以视为同一份数据。</p>
+<p>1.录制H264码流片段，以iOS为例，使用NSFileHandle处理较大文件的读写<br><figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">self</span><span class="variable">.h264FilePath</span> = [[<span class="built_in">NSSearchPathForDirectoriesInDomains</span>(<span class="built_in">NSDocumentDirectory</span>, <span class="built_in">NSUserDomainMask</span>, <span class="literal">YES</span>) lastObject] stringByAppendingPathComponent:[<span class="built_in">NSString</span> stringWithFormat:<span class="string">@"blurredVideo.h264"</span>]];</span><br><span class="line">[[<span class="built_in">NSFileManager</span> defaultManager] createFileAtPath:h264FilePath </span><br><span class="line">										contents:<span class="literal">nil</span> </span><br><span class="line">									  attributes:<span class="literal">nil</span>];</span><br><span class="line"><span class="keyword">self</span><span class="variable">.fileWriter</span> = [<span class="built_in">NSFileHandle</span> fileHandleForWritingAtPath:<span class="keyword">self</span><span class="variable">.h264FilePath</span>];</span><br></pre></td></tr></table></figure></p>
+<p>写入一个pkt.data<br><figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="typename">void</span>)<span class="string">writeData:</span>(uint8_t *)data <span class="string">size:</span>(<span class="typename">int</span>)size</span><br><span class="line">&#123;</span><br><span class="line">    NSData *frameData = [[NSData alloc] <span class="string">initWithBytes:</span>data <span class="string">length:</span>size];</span><br><span class="line">    [self.fileWriter seekToEndOfFile];</span><br><span class="line">    [self.fileWriter <span class="string">writeData:</span>frameData];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>关闭写入流<br><figure class="highlight less"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">-</span> (void)<span class="tag">finished</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="attr_selector">[self.fileWriter closeFile]</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>2.使用live555搭建流服务器，以Windows平台为例<br>操作非常简单，在<a href="http://www.live555.com/mediaServer/" title="live555服务器下载地址" target="_blank" rel="external">live555服务器下载</a>，将保存的.h264文件放置在解压得到的live555MediaServer.exe同一目录下，启动服务器即可<br><img src="/images/20151130/win_live555mediaserver_runninginfo.jpg" alt="图1"><br>以上图为例，连接rtsp://172.16.63.86/blurredVideo.264就获得保存下来的码流输入</p>
+<p>3.使用Elecard StreamEye简单分析H264片段<br>执行程序，打开保存的文件可以看到以下画面<br><img src="/images/20151130/elecard_streameye_mainform.jpg" alt="图2"><br>柱状图可以中红色代表I帧，蓝色代表P帧，绿色代表B帧(本例文件中没有压缩B帧因此没有显示)，高度表示帧的大小，可以很直观地看出Gop的大小变化</p>
+
+    
+	</div>
+	<footer class="entry-footer">
+		<div class="entry-meta-footer">
+			<span class="category">
+				
+			</span>
+			<span class="tags">
+				
+			</span>
+		</div>
+	</footer>
+	
+</article>
+
+
+	<hr class="article-devider">
+
+
+
+  
     <article id="post-Convert-DTS-and-PTS-for-recoding-video-with-ffmpeg" class="post">
 	<footer class="entry-meta-header">
 		<span class="meta-elements date">
